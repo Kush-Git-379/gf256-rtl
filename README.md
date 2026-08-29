@@ -10,6 +10,21 @@ Chien search, no Forney. The original C++ recovers lost pages by Gaussian
 elimination and k×k matrix inversion over GF(256), and contains none of those
 either. The hardware mirrors the algorithm actually built.
 
+| | Result |
+|---|---|
+| Multiply | **65,536 / 65,536** exhaustive vs C++ golden, both microarchitectures, and equivalent to each other |
+| Inverse | **256 / 256** exhaustive, including the `inv(0)` error contract |
+| MAC | **1,180,160** checks |
+| Smallest / fastest multiplier | `gf_mul_shift` — **62 LEs, 7.71 ns** (vs 804 LEs, 12.95 ns for the table version) |
+| Latches inferred | **0**, all four modules |
+
+Everything reproduces from a clean checkout with `./run_tests.sh`.
+
+> **On provenance:** the ISRO C++ in `ref/` is my own work from that internship,
+> included here as the verification reference. Only the Galois-field layer is
+> reimplemented in RTL — the mission-specific decoding around it is not, and is
+> not the subject of this project.
+
 ---
 
 ## Field parameters
