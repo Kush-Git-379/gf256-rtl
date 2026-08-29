@@ -101,10 +101,31 @@ Two things drive it, and both are worth understanding:
    address-decode → 256-entry mux → 9-bit add → 512-entry mux, which is deeper.
 
 **Takeaway:** the log/antilog form is the right choice on a CPU, where the tables
-sit in cache and the alternative is a real loop. On FPGA fabric without a
-registered-read memory, shift-and-reduce wins on both axes at once. Registering
-the address to force M9K inference would trade combinational delay for a pipeline
-stage — the natural next experiment, deliberately out of scope here.
+sit in cache and the alternative is a real loop. On FPGA fabric, without a
+registered-read memory, shift-and-reduce wins on both axes at once.
+
+### Follow-up: does registering the address recover M9K?
+
+Yes, completely. `experiments/gf_mul_lut_reg.v` is the same log/antilog design
+with registered read addresses:
+
+| variant | LEs | mem bits | regs | Fmax |
+|---|---|---|---|---|
+| `gf_mul_lut` (async ROM) | 804 | 0 | 0 | 77.2 MHz (comb.) |
+| `gf_mul_shift` (no tables) | 62 | 0 | 0 | 129.6 MHz (comb.) |
+| `gf_mul_lut_reg` (registered) | **23** | **6,144** | 10 | **179.6 MHz** |
+
+Logic collapses 804 → 23 LEs, the tables move into 2 of 66 M9K blocks, and Fmax
+becomes the highest of the three. The async read really was the whole story.
+
+The cost is that it is no longer combinational: throughput is one result per
+clock but latency is 3 cycles, so every consumer must be pipeline-aware. The
+verified core keeps all four modules combinational so they compose freely.
+
+**This experiment is not covered by `run_tests.sh`** — the exhaustive testbenches
+drive combinational DUTs, and verifying a pipelined version needs a clocked
+testbench with 3-cycle alignment. It is included as a synthesis result, not as a
+verified module, and is labelled that way in the source.
 
 ---
 
@@ -122,6 +143,8 @@ gf256-rtl/
 │   ├── tb_gf_mul.sv      exhaustive: both impls vs golden, and vs each other
 │   ├── tb_gf_inv.sv      exhaustive: 256 inputs + inv(0) error contract
 │   └── tb_gf_mac.sv      1.18M checks incl. accumulate + algebraic properties
+├── experiments/
+│   └── gf_mul_lut_reg.v  registered-ROM variant (synthesis result, unverified)
 ├── syn/
 │   ├── syn.tcl           per-module synthesis + STA
 │   └── mul.sdc           virtual-clock constraint over the combinational path
