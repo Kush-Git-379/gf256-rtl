@@ -19,6 +19,9 @@ either. The hardware mirrors the algorithm actually built.
 | Latches inferred | **0**, all four modules |
 
 Everything reproduces from a clean checkout with `./run_tests.sh`.
+A step-by-step walkthrough of the tooling — ModelSim waveforms, Quartus setup,
+reading timing reports, and reproducing every result — is in
+[`docs/LAB_GUIDE.md`](docs/LAB_GUIDE.md).
 
 > **On provenance:** the ISRO C++ in `ref/` is my own work from that internship,
 > included here as the verification reference. Only the Galois-field layer is
@@ -70,6 +73,18 @@ corner, 10 ns virtual clock over the combinational cone:
 | Registers | 0 | 0 |
 | Worst-case delay | 12.95 ns | **7.71 ns** |
 | Implied Fmax | 77.2 MHz | **129.6 MHz** |
+| Restricted Fmax | 77.2 MHz | 100.0 MHz |
+
+Two notes on those Fmax figures. They are **implied**: these modules are
+combinational, so the number is the clock ceiling for a design that registers
+around this logic, not a rate the module itself runs at.
+
+And Quartus reports a second column, *Restricted* Fmax, which is lower for the
+shift version (100.0 vs 129.6 MHz) because of a device `tmin` restriction — a
+floor imposed by the Cyclone IV fabric, not by this logic. The table version shows
+no restriction because its own 12.95 ns delay is already slower than that floor.
+So on raw logic delay the shift version wins 1.7x; on achievable clock in this
+part the margin narrows to 100.0 vs 77.2 MHz. The area result (13x) is unaffected.
 
 The other two modules, same device and corner:
 
@@ -143,6 +158,8 @@ gf256-rtl/
 │   ├── tb_gf_mul.sv      exhaustive: both impls vs golden, and vs each other
 │   ├── tb_gf_inv.sv      exhaustive: 256 inputs + inv(0) error contract
 │   └── tb_gf_mac.sv      1.18M checks incl. accumulate + algebraic properties
+├── docs/
+│   └── LAB_GUIDE.md      step-by-step tool walkthrough + analysis labs
 ├── experiments/
 │   └── gf_mul_lut_reg.v  registered-ROM variant (synthesis result, unverified)
 ├── syn/
